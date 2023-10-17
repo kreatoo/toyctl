@@ -11,4 +11,5 @@ bin           = @["toyctl"]
 
 # Dependencies
 
+requires "cligen >= 1.6.15"
 requires "nim >= 2.0.0"
