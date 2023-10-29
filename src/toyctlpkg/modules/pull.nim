@@ -3,6 +3,7 @@ import std/httpclient
 import std/json
 import std/strutils
 import std/os
+import std/parsecfg
 import download
 
 const imagesPath = getHomeDir()&"/.local/share/toyctl/containers"
@@ -15,17 +16,31 @@ proc imageDownloader(client: HttpClient, domain: string, image: string, token: s
   
   # Maybe this shouldn't be hardcoded? idk
   client.headers = newHttpHeaders({"Accept": "application/vnd.docker.image.rootfs.diff.tar.gzip", "Authorization": "Bearer "&token})
-  
+
+  var layerConf = newConfig()
+  var layerSums: string
+
   for i in layers:
     # TODO: check if the folder exist, don't download if it does
     # TODO: test with multiple layers
     let sum = ($i["digest"]).replace("\"", "")
     logger.log(lvlDebug, "Downloading "&sum)
-    createDir(imagesPath&"/"&sum)
+    createDir(imagesPath&"/registry/"&domain&"/"&image&"/"&sum)
     logger.log(lvlDebug, "https://"&domain&"/v2/"&image&"/blobs/"&sum)
-    download(client, "https://"&domain&"/v2/"&image&"/blobs/"&sum, imagesPath&"/"&sum&"/image.tar.gz")
+    download(client, "https://"&domain&"/v2/"&image&"/blobs/"&sum, imagesPath&"/registry/"&domain&"/"&image&"/"&sum&"/image.tar.gz")
     logger.log(lvlInfo, "Layer "&sum&" downloaded")
+    setCurrentDir(imagesPath&"/registry/"&domain&"/"&image&"/"&sum)
+    discard execShellCmd("bsdtar -xf image.tar.gz")
+    removeFile("image.tar.gz")
+
+    if isEmptyOrWhitespace(layerSums):
+      layerSums = sum
+    else:
+      layerSums = layerSums&" "&sum
   
+  layerConf.setSectionKey("Image", "containerId", layerSums)
+  layerConf.writeConfig(imagesPath&"/registry/"&domain&"/"&image&"/info.ini")
+
   logger.log(lvlInfo, "All layers downloaded for "&image)
 
 proc pullInternal*(image: string, tag: string, logLevel = lvlAll) =

@@ -37,5 +37,7 @@ proc download*(client = newHttpClient(), url: string, file: string, instantError
         raise getCurrentException()
       else:
         echo "error: download failed"
+        quit(1)
+
     echo "warn: download failed, retrying"
     download(client, url, file, true, raiseWhenFail)

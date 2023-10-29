@@ -2,6 +2,10 @@
 import cligen
 import toyctlpkg/commands/pullcmd
 import toyctlpkg/commands/runcmd
+import toyctlpkg/commands/createcmd
+import toyctlpkg/commands/rmcmd
+import toyctlpkg/commands/startcmd
+import toyctlpkg/commands/stopcmd
 
 when isMainModule:
   dispatchMulti(
@@ -9,9 +13,19 @@ when isMainModule:
     pull
   ],
   [
-    create
+    run
   ],
   [
-    run
+    start
+  ],
+  [
+    stop
+  ],
+  [
+    createCommand,
+    cmdName="create"    
+  ],
+  [
+    rm
   ]
   )
