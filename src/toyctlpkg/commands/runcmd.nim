@@ -1,9 +1,9 @@
 import std/os
 import std/parsecfg
 import std/strutils
-import std/osproc
 import std/logging
 import ../modules/run
+import ../modules/logger
 
 const hardcoded = "ghcr.io"
 
@@ -21,4 +21,4 @@ proc run*(image: seq[string], command = "sh", runtime = "crun") =
   #else:
   #  getHomeDir()&"/.local/share/toyctl/containers/registry/"&hardcoded&"/"&imageSplitted[0]&"/"&
   
-  runInternal(imageSplitted[0], tag, dir, runtime, command, lvlAll)
+  runInternal(imageSplitted[0], tag, dir, runtime, command, newLogger(lvlAll))

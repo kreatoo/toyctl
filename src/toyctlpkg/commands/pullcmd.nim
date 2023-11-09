@@ -1,6 +1,7 @@
 import std/strutils
 import std/logging
 import ../modules/pull
+import ../modules/logger
 
 proc pull*(images: seq[string]) =
   ## Pulls an image from a registry.
@@ -11,6 +12,6 @@ proc pull*(images: seq[string]) =
       tag = imageSplitted[1]
     
     when not defined(release):
-      pullInternal(imageSplitted[0], tag, lvlAll)
+      pullInternal(imageSplitted[0], tag)
     else:
-      pullInternal(imageSplitted[0], tag, lvlInfo)
+      pullInternal(imageSplitted[0], tag, newLogger(lvlInfo))

@@ -1,15 +1,19 @@
 import std/os
 import std/times
+import std/osproc
+import std/logging
 import std/strutils
 import std/parsecfg
 import randgen
+import logger
 
-proc createInternal*(image, tag, runtime, command: string): string =
+proc createInternal*(image, tag, runtime, command: string, interactive = true, logger = newLogger()): string =
   # Creates a container and returns the container ID.
   let finalSum = randId()
   let confPath = getHomeDir()&"/.local/share/toyctl/containers.ini"
-  createDir(getHomeDir()&"/.local/share/toyctl/containers/created/"&finalSum) 
-  createDir(getHomeDir()&"/.local/share/toyctl/containers/created/"&finalSum&"/diff")
+  let containerPath = getHomeDir()&"/.local/share/toyctl/containers/created/"&finalSum
+  createDir(containerPath)
+  createDir(containerPath&"/diff")
   var dict: Config
   
   if fileExists(confPath):
@@ -32,6 +36,14 @@ proc createInternal*(image, tag, runtime, command: string): string =
   dict.setSectionKey(finalSum, "names", "") # TODO
 
   dict.writeConfig(confPath)
+  
+  setCurrentDir(containerPath)
 
+  let specCmd = execCmdEx(runtime&" spec")
+  if specCmd.exitCode != 0:
+   logger.log(lvlDebug, specCmd.output)
+   logger.log(lvlFatal, "Generating spec failed")
+   quit(1)
+  
   return finalSum
 

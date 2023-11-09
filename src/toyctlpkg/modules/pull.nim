@@ -5,10 +5,11 @@ import std/strutils
 import std/os
 import std/parsecfg
 import download
+import logger
 
-const imagesPath = getHomeDir()&"/.local/share/toyctl/containers"
+let imagesPath = getHomeDir()&"/.local/share/toyctl/containers"
 
-proc imageDownloader(client: HttpClient, domain: string, image: string, token: string, logger: ConsoleLogger) =
+proc imageDownloader(client: HttpClient, domain: string, image: string, token: string, logger: Logger) =
   # Internal proc to download images, and put them to the right place.
   logger.log(lvlDebug, "imageDownloader ran")
   createDir(imagesPath)
@@ -24,30 +25,30 @@ proc imageDownloader(client: HttpClient, domain: string, image: string, token: s
     # TODO: check if the folder exist, don't download if it does
     # TODO: test with multiple layers
     let sum = ($i["digest"]).replace("\"", "")
-    logger.log(lvlDebug, "Downloading "&sum)
-    createDir(imagesPath&"/registry/"&domain&"/"&image&"/"&sum)
+    let folderSum = sum.replace(":", "-")
+    logger.log(lvlDebug, "Downloading "&folderSum)
+    createDir(imagesPath&"/registry/"&domain&"/"&image&"/"&folderSum)
     logger.log(lvlDebug, "https://"&domain&"/v2/"&image&"/blobs/"&sum)
-    download(client, "https://"&domain&"/v2/"&image&"/blobs/"&sum, imagesPath&"/registry/"&domain&"/"&image&"/"&sum&"/image.tar.gz")
-    logger.log(lvlInfo, "Layer "&sum&" downloaded")
-    setCurrentDir(imagesPath&"/registry/"&domain&"/"&image&"/"&sum)
+    download(client, "https://"&domain&"/v2/"&image&"/blobs/"&sum, imagesPath&"/registry/"&domain&"/"&image&"/"&folderSum&"/image.tar.gz")
+    logger.log(lvlInfo, "Layer "&folderSum&" downloaded")
+    setCurrentDir(imagesPath&"/registry/"&domain&"/"&image&"/"&folderSum)
     discard execShellCmd("bsdtar -xf image.tar.gz")
     removeFile("image.tar.gz")
 
     if isEmptyOrWhitespace(layerSums):
-      layerSums = sum
+      layerSums = folderSum
     else:
-      layerSums = layerSums&" "&sum
+      layerSums = layerSums&" "&folderSum
   
   layerConf.setSectionKey("Image", "containerId", layerSums)
   layerConf.writeConfig(imagesPath&"/registry/"&domain&"/"&image&"/info.ini")
 
   logger.log(lvlInfo, "All layers downloaded for "&image)
 
-proc pullInternal*(image: string, tag: string, logLevel = lvlAll) =
+proc pullInternal*(image: string, tag: string, loggerMain = newLogger(lvlAll)) =
   # Proc for pulling images.
   const domain = "ghcr.io"
   
-  var loggerMain = newConsoleLogger(levelThreshold=logLevel, fmtStr="[$time] - $levelname: ")
   loggerMain.log(lvlDebug, "pullInternal ran, image: '"&image&"' tag: '"&tag&"'")
   var client = newHttpClient()
   
